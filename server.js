@@ -29,10 +29,6 @@ mongoose.connect(uri, {
 
 app.use(cors());
 
-// app.get('/api/products', (req,res)=>{
-//     console.log(data.products)
-//     res.send(data.products);
-// })
 
 app.use('/api/users', userRouter);
 
