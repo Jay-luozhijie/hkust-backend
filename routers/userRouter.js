@@ -5,6 +5,10 @@ import data from '../data.js';
 import bcrypt from "bcryptjs"
 import expressAsyncHandler from 'express-async-handler'
 import AlumniActivities from '../models/alumniActivities.js';
+import multer from 'multer';
+import crypto from 'crypto';
+import FormData from 'form-data';
+import axios from 'axios'
 
 const userRouter = express.Router();
 
@@ -156,5 +160,55 @@ userRouter.get('/activitiesDetail', async (req, res) => {
         res.status(500).json({ message: 'Error fetching activities data', error });
     }
 });
+
+
+const apiKey = '487875633899292'
+const apiSecret = 'bLvtV6530MoXNn8ifA-0b9NoR5Y';
+const uploadPreset = 'ml_default';
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+const cloudName = 'dqhobzrs1'
+
+userRouter.post('/generateImageUrl', upload.single('file'), async (req, res) => {
+    // const { id = 1 } = req.query;
+    const file = req.file;
+    if (!file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const paramsToSign = `timestamp=${timestamp}&upload_preset=${uploadPreset}`;
+    const signature = crypto.createHash('sha1').update(paramsToSign + apiSecret).digest('hex');
+
+    const formData = new FormData();
+    formData.append('file', file.buffer, file.originalname);
+    formData.append('timestamp', timestamp);
+    formData.append('api_key', apiKey);
+    formData.append('signature', signature);
+    formData.append('upload_preset', uploadPreset);
+    console.log(formData)
+
+    try {
+        const response = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData, {
+            headers: { ...formData.getHeaders() }
+        });
+        res.json({ secure_url: response.data.secure_url });
+    } catch (error) {
+        console.error('Error uploading the image', error);
+        res.status(500).send('Error uploading the image.');
+    }
+    // try {
+    //     const news = await AlumniActivities.findById(id);
+    // if (!news) {
+    //     console.log('News not found');
+    //     // Handle case where news with given ID is not found
+    // } else {
+    //     res.json(news);
+    // }
+    // } catch (error) {
+    //     res.status(500).json({ message: 'Error fetching activities data', error });
+    // }
+});
+
 
 export default userRouter;
